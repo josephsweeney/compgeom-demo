@@ -1,3 +1,4 @@
+// Evil global state stuff
 let lines = []
 let points = []
 let pointsIndex = 0
@@ -6,15 +7,13 @@ let newline = null
 const scale = 1000
 const pointRadius = 5
 
-let offset = null
-
+// P5.js functions
 function setup(){
   createCanvas(windowWidth, windowHeight)
   strokeWeight(3)
-  offset = {x:windowWidth/2, y:windowHeight/2}
 }
 
-function customDraw(){
+function draw(){
   clear()
   newline ? newline.draw() : null
   for(i = 0; i<points.length; i++){
@@ -40,7 +39,6 @@ function mousePressed(){
     lines.push(newline)
     pointsIndex++
   }
-  customDraw()
 }
 
 function mouseDragged(){
@@ -55,7 +53,6 @@ function mouseDragged(){
       points[pointIndex].y = mouseY
     }
   }
-  customDraw()
 }
 
 function mouseReleased(){
@@ -70,7 +67,6 @@ function mouseReleased(){
     lines.pop()
   }
   newline = null
-  customDraw()
 }
 
 function clickedPoint(){
@@ -88,22 +84,8 @@ function clickedPoint(){
   }
 }
 
-function inPoint(x1, y1, x2, y2){
-  return dist(x1,y1,x2,y2) < pointRadius*5
-}
-
 function windowResized(){
   resizeCanvas(windowWidth, windowHeight)
-  offset = { x:windowWidth/2, y:windowHeight/2 }
-  customDraw()
-}
-
-function getLine(m, b){
-  let x1 = -1000
-  let x2 = 1000
-  let p1 = new Point(x1, m*x1+b)
-  let p2 = new Point(x2, m*x2+b)
-  return new Line(p1, p2)
 }
 
 // Base Objects
@@ -139,4 +121,36 @@ function Line(p1, p2){
   this.draw = function(){
     line(this.p1.x, this.p1.y, this.p2.x, this.p2.y)
   }
+}
+
+// Utility functions
+function clickedPoint(){
+  if(draggingPoint === null){
+    for(i = 0; i<points.length; i++){
+      if(inPoint(points[i].x,points[i].y,mouseX,mouseY)){
+        draggingPoint = points[i]
+        return i
+      }
+    }
+    return null
+  }
+  else{
+    return points.indexOf(draggingPoint)
+  }
+}
+
+function inPoint(x1, y1, x2, y2){
+  return dist(x1,y1,x2,y2) < pointRadius*5
+}
+
+function getLine(m, b){
+  let x1 = -1*windowWidth
+  let x2 = windowWidth
+  let p1 = new Point(x1, m*x1+b)
+  let p2 = new Point(x2, m*x2+b)
+  return new Line(p1, p2)
+}
+
+function inPoint(x1, y1, x2, y2){
+  return dist(x1,y1,x2,y2) < pointRadius*5
 }
