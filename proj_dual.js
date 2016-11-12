@@ -1,49 +1,43 @@
-let drawnPoints = []
 let lines = []
-let drawnLines = []
 let points = []
 let pointsIndex = 0
-let linesIndex = 0
 let draggingPoint = null
+let newline = null
 const scale = 1000
 const pointRadius = 5
-let newline = null
+
+let offset = null
 
 function setup(){
   createCanvas(windowWidth, windowHeight)
   strokeWeight(3)
+  offset = {x:windowWidth/2, y:windowHeight/2}
 }
 
 function customDraw(){
-  clear();
-  newline ? line(...newline) : null
-  for(i = 0; i<pointsIndex; i++){
-    ellipse(drawnPoints[i].x, drawnPoints[i].y, pointRadius)
-    line(...getLinePoints(lines[i]))
+  clear()
+  newline ? newline.draw() : null
+  for(i = 0; i<points.length; i++){
+    points[i].draw()
+    points[i].dualLine().draw()
   }
-  for(i = 0; i<linesIndex; i++){
-    line(...drawnLines[i])
-    ellipse(points[i].x, points[i].y, pointRadius)
+  for(i = 0; i<lines.length; i++){
+    lines[i].draw()
+    lines[i].dualPoint().draw()
   }
 }
 
 function mousePressed(){
+  let point = new Point(mouseX, mouseY)
   let pointIndex = clickedPoint()
   if(pointIndex === null){
     // console.log(mouseX)
     // console.log(mouseY)
-    drawnPoints.push({
-      x:mouseX,
-      y:mouseY,
-    })
-    newline = [mouseX,mouseY,mouseX,mouseY]
-
+    points.push(point)
     ellipse(mouseX,mouseY,pointRadius)
-    lines.push({
-      m:2*mouseX/scale,
-      b:-1*mouseY,
-    })
-    // console.log(getLinePoints(lines[index]))
+
+    newline = new Line(point, new Point(point.x, point.y))
+    lines.push(newline)
     pointsIndex++
   }
   customDraw()
@@ -51,15 +45,14 @@ function mousePressed(){
 
 function mouseDragged(){
   let pointIndex = clickedPoint()
-  // console.log(pointIndex)
-  if(pointIndex !== null){
-    drawnPoints[pointIndex].x = mouseX
-    drawnPoints[pointIndex].y = mouseY
-    lines[pointIndex].m = 2*mouseX/scale
-    lines[pointIndex].b = -1*mouseY
-    if(newline){
-      newline[2] = mouseX
-      newline[3] = mouseY
+  if(newline){
+    newline.p2.x = mouseX
+    newline.p2.y = mouseY
+  }
+  else{
+    if(pointIndex !== null){
+      points[pointIndex].x = mouseX
+      points[pointIndex].y = mouseY
     }
   }
   customDraw()
@@ -67,46 +60,83 @@ function mouseDragged(){
 
 function mouseReleased(){
   draggingPoint = null
-  if(newline){
-    drawnLines.push(newline)
-    let m = (newline[2]-newline[0])/(newline[3]-newline[1])
-    points.push({
-      x: scale*m/2,
-      y: newline[3],
-    })
-    newline = null
-    linesIndex++
+  let line = newline
+    ? dist(newline.p1.x,newline.p1.y,newline.p2.x,newline.p2.y) > pointRadius
+    : false
+  if(line) {
+    points.push(newline.p2)
   }
-}
-
-function getLinePoints(line){
-  let x1 = 0
-  let x2 = 10000
-  let y1 = -1*((line.m*x1)+line.b)
-  let y2 = -1*((line.m*x2)+line.b)
-  return [x1,y1,x2,y2]
+  else if(newline) {
+    lines.pop()
+  }
+  newline = null
+  customDraw()
 }
 
 function clickedPoint(){
   if(draggingPoint === null){
-    for(i = 0; i<pointsIndex; i++){
-      if(inPoint(drawnPoints[i].x,drawnPoints[i].y,mouseX,mouseY)){
-        // console.log('clicked point: '+i)
-        draggingPoint = i
+    for(i = 0; i<points.length; i++){
+      if(inPoint(points[i].x,points[i].y,mouseX,mouseY)){
+        draggingPoint = points[i]
         return i
       }
     }
     return null
   }
   else{
-    return draggingPoint
+    return points.indexOf(draggingPoint)
   }
 }
 
 function inPoint(x1, y1, x2, y2){
-  return dist(x1,y1,x2,y2) < pointRadius*10
+  return dist(x1,y1,x2,y2) < pointRadius*5
 }
 
 function windowResized(){
   resizeCanvas(windowWidth, windowHeight)
+  offset = { x:windowWidth/2, y:windowHeight/2 }
+  customDraw()
+}
+
+function getLine(m, b){
+  let x1 = -1000
+  let x2 = 1000
+  let p1 = new Point(x1, m*x1+b)
+  let p2 = new Point(x2, m*x2+b)
+  return new Line(p1, p2)
+}
+
+// Base Objects
+function Point(x, y){
+  this.x = x
+  this.y = y
+
+  this.dualLine = function(){
+    return getLine(2*this.x/scale, -1*this.y)
+  }
+
+  this.draw = function(){
+    ellipse(this.x, this.y, pointRadius)
+  }
+}
+
+function Line(p1, p2){
+  this.p1 = p1
+  this.p2 = p2
+
+  this.getSlope = function(){
+    return (this.p2.y-this.p1.y)/(this.p2.x-this.p1.x)
+  }
+
+  this.getIntercept = function(){
+    return (this.getSlope()*-1*this.p1.x)+this.p1.y
+  }
+
+  this.dualPoint = function(){
+    return new Point(scale*this.getSlope()/2, -1*this.getIntercept())
+  }
+
+  this.draw = function(){
+    line(this.p1.x, this.p1.y, this.p2.x, this.p2.y)
+  }
 }
